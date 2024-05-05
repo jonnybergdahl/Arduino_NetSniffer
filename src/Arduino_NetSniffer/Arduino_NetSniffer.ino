@@ -1,21 +1,21 @@
-#include <EEPROM.h>
 #include <Adafruit_GFX.h>    // Core graphics library
 #include <Fonts/FreeMonoBold18pt7b.h>
 #include <Fonts/FreeMonoBold12pt7b.h>
+#include "FreeSerif12pt7b.h"
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <WiFiUdp.h>
 #include <AsyncUDP.h>
 #include "time.h"
-#include <TFT_eSPI.h>
+#include <bb_spi_lcd.h>
 #include <SPI.h>
 #include "secrets.h"
 
 AsyncUDP udp;
 static uint8_t ucBuf[48 * 384];
-#define WIDTH 384
-#define HEIGHT 280
-TFT_eSPI tft = TFT_eSPI(); 
+#define WIDTH 320
+#define HEIGHT 240
+BB_SPI_LCD tft = BB_SPI_LCD(); 
 
 const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 3600;
@@ -74,7 +74,8 @@ const char *hexDigits = "0123456789ABCDEF";
 
 void initTft()
 {
-  tft.init();
+  tft.begin(LCD_ILI9341, 0, F_CPU / 4, 15, 2, -1, 21, 12, 13, 14);
+
   tft.setRotation(3);
   
   tft.fillScreen(TFT_BLACK);
@@ -82,10 +83,11 @@ void initTft()
   // Set "cursor" at top left corner of display (0,0) and select font 2
   // (cursor will move to next line automatically during printing with 'tft.println'
   //  or stay on the line is there is room for the text with tft.print)
-  tft.setCursor(0, 0, 4);
+  tft.setCursor(0, 0);
   // Set the font colour to be white with a black background, set text size multiplier to 1
+  tft.setFont(FONT_12x16);
   tft.setTextColor(TFT_YELLOW, TFT_BLACK);  
-  //tft.setTextSize(1);
+  //tft.setTextSize(4);
   // We can now plot text on screen using the "print" class
   tft.print("Waiting...");  
 }
@@ -114,10 +116,10 @@ void printData()
   // Set "cursor" at top left corner of display (0,0) and select font 2
   // (cursor will move to next line automatically during printing with 'tft.println'
   //  or stay on the line is there is room for the text with tft.print)
-  tft.setCursor(0, 0, 2);
+  tft.setCursor(0, 0);
   // Set the font colour to be white with a black background, set text size multiplier to 1
   tft.setTextColor(TFT_WHITE,TFT_BLACK);  
-  tft.setTextSize(1);
+  tft.setFont(FONT_12x16);
   // We can now plot text on screen using the "print" class
   tft.println(buffer);
   tft.setTextColor(TFT_CYAN, TFT_BLACK);
@@ -125,13 +127,14 @@ void printData()
   
   // Set the font colour to be red with black background, set to font 4
   tft.setTextColor(TFT_BLUE,TFT_BLACK);    
-  tft.setTextFont(4);
+  tft.setFont(FONT_16x16);
   tft.println(newIP);
 
   // Set the font colour to be green with black background, set to font 2
+  //tft.setFont(FONT_8x8);
+  tft.setFreeFont(&FreeSerif12pt7b);
   tft.setTextColor(TFT_GREEN,TFT_BLACK);
-  tft.setTextFont(2);
-  tft.println(newMAC);     
+  tft.println(newMAC);
 }
 
 void parsePacket(char* data, int length)
@@ -272,56 +275,6 @@ void setupUDP()
       parsePacket(data, length);
     });
   };
-}
-
-bool isDataStored()
-{
-  return EEPROM.read(96) != 0;
-}
-
-String readString(int offset, int len = 32)
-{
-  String s;
-  int p = offset;
-  for(int i = 0; i < len; i++)
-  {
-    char c = EEPROM.read(p++);
-    if(c)
-      s+=c;
-  }
-  return s;
-}
-
-void readData()
-{
-  newMAC = readString(0, 32);
-  newIP = readString(32, 32);
-  newName = readString(64, 32);
-}
-
-void clearData()
-{
-  EEPROM.write(96, 0);
-  EEPROM.commit();
-}
-
-void writeString(String s, int offset, int len = 32)
-{
-  int p = offset;
-  for(int i = 0; i < len; i++)
-    if(i < s.length())
-      EEPROM.write(p++, s.charAt(i));
-    else
-      EEPROM.write(p++, 0);
-}
-
-void writeData()
-{
-  writeString(newMAC, 0, 32);
-  writeString(newIP, 32, 32);
-  writeString(newName, 64, 32);
-  EEPROM.write(96, 1);
-  EEPROM.commit();
 }
 
 void setup() 

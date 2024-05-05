@@ -1,3 +1,5 @@
+src/Arduino_NetSniffer/secrets.h
+
 # Prerequisites
 *.d
 
@@ -30,5 +32,3 @@
 *.exe
 *.out
 *.app
-
-src/Arduino_NetSniffer/secrets.h
